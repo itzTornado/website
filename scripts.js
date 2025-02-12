@@ -649,10 +649,6 @@ class App {
             this.performance = new PerformanceMonitor();
         }
 
-        // Initialize utilities
-        this.lazyLoader = new LazyLoader();
-        this.audio = new AudioManager();
-
         // Add resize handler
         window.addEventListener('resize', () => this.handleResize());
     }
@@ -668,3 +664,108 @@ class App {
 document.addEventListener('DOMContentLoaded', () => {
     new App();
 });
+
+// LazyLoader: Lazy loads images using IntersectionObserver
+class LazyLoader {
+    constructor() {
+      this.images = document.querySelectorAll('img[data-src]');
+      this.init();
+    }
+  
+    init() {
+      if ('IntersectionObserver' in window) {
+        this.setupIntersectionObserver();
+      } else {
+        this.loadAllImages();
+      }
+    }
+  
+    setupIntersectionObserver() {
+      const options = {
+        root: null,
+        rootMargin: '50px',
+        threshold: 0
+      };
+  
+      const observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            this.loadImage(entry.target);
+            observer.unobserve(entry.target);
+          }
+        });
+      }, options);
+  
+      this.images.forEach(image => observer.observe(image));
+    }
+  
+    loadImage(image) {
+      const src = image.getAttribute('data-src');
+      image.onload = () => {
+        image.classList.add('loaded');
+        image.removeAttribute('data-src');
+      };
+      image.src = src;
+    }
+  
+    loadAllImages() {
+      this.images.forEach(image => this.loadImage(image));
+    }
+  }
+  
+  // LoadingAnimation: Animates the loader elements using GSAP
+  class LoadingAnimation {
+    constructor() {
+      this.loader = document.querySelector('.loader');
+      this.japaneseSymbol = document.querySelector('.japanese-symbol');
+      // Use CSSRulePlugin to target the pseudo-element of .loading-bar
+      this.loadingBarAfter = CSSRulePlugin.getRule(".loading-bar::after");
+      this.init();
+    }
+  
+    init() {
+      window.addEventListener('load', () => this.playLoadingAnimation());
+    }
+  
+    playLoadingAnimation() {
+      // Ensure scrolling remains disabled during the animation
+      document.body.style.overflow = 'hidden';
+  
+      const tl = gsap.timeline({
+        onComplete: () => {
+          document.body.style.overflow = '';
+          this.initializePageAnimations();
+          // Optionally hide the loader after animation
+          this.loader.style.display = 'none';
+        }
+      });
+  
+      tl.to(this.japaneseSymbol, {
+        opacity: 1,
+        y: 0,
+        duration: 1,
+        ease: 'power3.out'
+      })
+      .to(this.loadingBarAfter, {
+        cssRule: { width: '100%' },
+        duration: 1,
+        ease: 'power3.inOut'
+      }, "-=1") // Overlap the animation by 1 second
+      .to(this.loader, {
+        yPercent: -100,
+        duration: 0.8,
+        ease: 'power3.inOut'
+      });
+    }
+  
+    initializePageAnimations() {
+      // Initialize other page animations here
+      console.log("Page animations initialized.");
+    }
+  }
+  
+  // Initialize LazyLoader and LoadingAnimation when DOM is ready
+  document.addEventListener("DOMContentLoaded", function() {
+    new LazyLoader();
+    new LoadingAnimation();
+  });
